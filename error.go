@@ -20,14 +20,18 @@ func (e *Error) Error() error {
 		name = "ILLEGAL DATA ADDRESS/非法数据地址"
 	case ECIllegalDataValue:
 		name = "ILLEGAL DATA VALUE/非法数据值"
-	case ECServerDeviceFailure:
+	case ECDeviceFailure:
 		name = "SERVER DEVICE FAILURE/从站设备故障"
 	case ECAcknowledge:
 		name = "ACKNOWLEDGE/确认"
-	case ECServerDeviceBusy:
+	case ECDeviceBusy:
 		name = "SERVER DEVICE BUSY/从属设备忙"
+	case ECNegativeAcknowledge:
+		name = "GEGATIVEACKNOWLEDGE/未确认"
 	case ECMemoryParityError:
 		name = "MEMORY PARITY ERROR/存储奇偶性差错"
+	case ECNotDefined:
+		name = "NOT DEFINED 未定义"
 	case ECGatewayPathUnavailable:
 		name = "GATEWAY PATH UNAVAILABLE/不可用网关路径"
 	case ECGatewayTargetDeviceFailedToRespond:

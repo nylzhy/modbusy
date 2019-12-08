@@ -2,9 +2,9 @@ package modbusy
 
 // Modbus APU/PDU max length
 const (
-	MaxADULength = 256 //MaxADULength ADU 最大长度
-	SerialMaxPDU = 253 //SerialMaxPDU 串行链路上最大的PDU长度
-	TCPMaxPDU    = 249 //TCPMaxPDU TCP链路上最大的PDU长度
+	MaxADULength       = 256 //MaxADULength ADU 最大长度
+	SerialMaxPDULength = 253 //SerialMaxPDU 串行链路上最大的PDU长度
+	TCPMaxPDULength    = 249 //TCPMaxPDU TCP链路上最大的PDU长度
 )
 
 // FC Function Code Definition 功能码定义
@@ -34,6 +34,26 @@ const (
 	FCReportServerID  = 0x11 // FCReportServerID: Report Server ID (Serial Line only) function code 17
 )
 
+const (
+	//BroadcastAddr Modbus Broadcast address
+	BroadcastAddr uint16 = 0
+)
+
+const (
+	//MaxReadBitsLength 最大线圈或离散寄存器读取量
+	MaxReadBitsLength = 0x07D0 //2000
+	//MaxWriteBitsLength 最大线圈写入数量
+	MaxWriteBitsLength = 0x07B0 //1968
+	//MaxReadRegLength 最大保持寄存器/输入寄存器数量
+	MaxReadRegLength = 0x7D //125
+	//MaxWriteRegLength 最大保持寄存器写入量
+	MaxWriteRegLength = 0x7B //123
+	//MaxWRReadRegLength 最大保持寄存器/输入寄存器数量
+	MaxWRReadRegLength = 0x7D //125
+	//MaxRWWriteLength 最大读写寄存器数量 121
+	MaxRWWriteLength = 0x79 //121
+)
+
 /*
 代码	名称	含义
 01	非法功能	对于服务器（或从站）来说，询问中接收到的功能码是不可允许的操作，可能是因为功能码仅适用于新设备而被选单元中不可实现同时，还指出服务器（或从站）在错误状态中处理这种请求，例如：它是未配置的，且要求返回寄存器值。
@@ -52,10 +72,12 @@ const (
 	ECIllegalFunction                    = 0x01 // ILLEGAL FUNCTION 非法功能
 	ECIllegalDataAddress                 = 0x02 // ILLEGAL DATA ADDRESS 非法数据地址
 	ECIllegalDataValue                   = 0x03 // ILLEGAL DATA VALUE 非法数据值
-	ECServerDeviceFailure                = 0x04 // SERVER DEVICE FAILURE 从站设备故障
+	ECDeviceFailure                      = 0x04 // SERVER/SLAVER DEVICE FAILURE 设备故障
 	ECAcknowledge                        = 0x05 // ACKNOWLEDGE 确认
-	ECServerDeviceBusy                   = 0x06 // SERVER DEVICE BUSY 从属设备忙
+	ECDeviceBusy                         = 0x06 // SERVER/SLAVER DEVICE BUSY 设备忙
+	ECNegativeAcknowledge                = 0x07 // GEGATIVEACKNOWLEDGE 未确认
 	ECMemoryParityError                  = 0x08 // MEMORY PARITY ERROR  存储奇偶性差错
+	ECNotDefined                         = 0x09 // NOT DEFINED 未定义
 	ECGatewayPathUnavailable             = 0x0A // GATEWAY PATH UNAVAILABLE 不可用网关路径
 	ECGatewayTargetDeviceFailedToRespond = 0x0B // GATEWAY TARGET DEVICE FAILED TO RESPOND 网关目标设备响应失败
 )

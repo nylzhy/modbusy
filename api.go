@@ -58,3 +58,75 @@ type PLCClient interface {
 	//Read/Write Coils/DiscreteInputs/InputRegisters/HoldingRegisters with PLC mode
 	Exec(SlaveIDaddr uint8, mode bool, addr, length uint, databuf []byte) (result []byte, err error)
 }
+
+type comchannel struct {
+	HiQueue   *[]int
+	LoQueue   *[]int
+	configure int
+}
+
+type deviceInfo struct {
+	Name     string
+	Addr     string //无论任何时候都是从站地址
+	Enable   bool   //是否启用
+	Channel  string //通道名称或编码
+	Protocol string // 协议iD
+	// ParseRule string //解析规则名称或编码
+	// Cmds      string // 命令规则，是否和解析规则合并
+}
+
+type bytesptr *[]byte
+
+type protocol struct {
+	Name      string
+	ID        string
+	Cmds      []command
+	ParseRule [][]IndexParse //第一层用于和cmds匹配，一个cmd需要多个tag
+}
+
+// 解析完没有错误，需要注册全局变量
+// 按照dev_addr.tag_cmd 或者全局ID生成唯一索引
+
+// Value a value and value status
+type Value struct {
+	vtype   string
+	partype parametertype
+	value   interface{}
+	status  uint8
+}
+
+//RealTimeVarTable real time value string 应该是全局名称+ID
+//一个全局名称包括信道_设备名称_参数名称
+type RealTimeVarTable map[string]Value
+
+//其他信息归上层服务器管理，例如设备安装位置，厂家、编号等等，与收发无关的信息，该scada的作用就是让采集信息有意义，但是全部意义
+
+// IndexParse Indexarse
+type IndexParse struct {
+	DevCmdID   string  //"Dev.Cmd"
+	Tag        string  `json:"tag,omitempty"`
+	ParType    string  // 参数类型或参数编码
+	StartIndex uint    `json:"start_index,omitempty"`
+	EndIndex   uint    `json:"end_index,omitempty"`
+	Offset     float64 `json:"offset,omitempty"`
+	DataType   uint8   `json:"data_type,omitempty"`
+	PT         uint    `json:"pt,omitempty"`
+	CT         uint    `json:"ct,omitempty"`
+	//Value      float64 `json:"value,omitempty"` // value = (d-offset)*pt/ct
+}
+
+type parametertype struct {
+	Name  string
+	parid uint16
+	unit  string
+}
+
+// 由于各个字段不同情况范围不一样，那么由业务检查，代码里不做语言要求
+type command struct {
+	Name      string
+	ID        string
+	funcode   uint
+	StartAddr uint //正常情况下uint16足够，但是对于PLC系统，则需要uint才能保证
+	RegLength uint
+	Buf       bytesptr
+}
