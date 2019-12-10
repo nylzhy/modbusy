@@ -59,74 +59,105 @@ type PLCClient interface {
 	Exec(SlaveIDaddr uint8, mode bool, addr, length uint, databuf []byte) (result []byte, err error)
 }
 
+// configure not conside right
 type comchannel struct {
 	HiQueue   *[]int
 	LoQueue   *[]int
 	configure int
 }
 
-type deviceInfo struct {
-	Name     string
-	Addr     string //无论任何时候都是从站地址
-	Enable   bool   //是否启用
-	Channel  string //通道名称或编码
-	Protocol string // 协议iD
-	// ParseRule string //解析规则名称或编码
-	// Cmds      string // 命令规则，是否和解析规则合并
+type channeltype struct {
+	rs485         bool //bit0
+	modbustcp     bool //bit1
+	modbusudp     bool //bit2
+	modbusovertcp bool //bit3
+	modbusoverudp bool //bit4
 }
 
-type bytesptr *[]byte
-
-type protocol struct {
-	Name      string
-	ID        string
-	Cmds      []command
-	ParseRule [][]IndexParse //第一层用于和cmds匹配，一个cmd需要多个tag
+// MDevice modbus device
+// Addr is modbus slave/server addr: 0-255
+// Emable means the device is enable
+// Channel: modbus rs485: rs485_comxx for windows or rs485_ttySUBS0, or tcp_192.168.1.1:502 or udp_192.168.3.1:1052
+// ProtocalID is protocal id that reg in system
+type MDevice struct {
+	Name       string `json:"name"`
+	Addr       uint8  `json:"addr"`
+	Enable     bool   `json:"enable"`
+	Channel    string `json:"channel"`
+	ProtocolID string `json:"protocolid"`
 }
 
-// 解析完没有错误，需要注册全局变量
-// 按照dev_addr.tag_cmd 或者全局ID生成唯一索引
-
-// Value a value and value status
-type Value struct {
-	vtype   string
-	partype parametertype
-	value   interface{}
-	status  uint8
+// MeasureValue a measure value with deal, it inclues data and value status
+// cType is data pull from interface{} and convert rule, include int16/int32/int64/float32/float64/byte/bool
+// phyTypeID is physical type id
+// value is value
+// status means the value trusted state 0 is normal, 1 is ... &~&
+type MeasureValue struct {
+	cType     string      // 数据传递解析类型，是TagParse解析的子集，用于表达数据，语言层面的数据表达解析
+	phyTypeID PhyType     // 物理属性，用于上传标记，从协议中获取
+	value     interface{} // 数据，根据TagParse生成原始数据
+	state     uint8       // 数据传输或获取状态码
 }
 
-//RealTimeVarTable real time value string 应该是全局名称+ID
-//一个全局名称包括信道_设备名称_参数名称
-type RealTimeVarTable map[string]Value
+// RealTimeVarTable real time varible tag value table
+// a map for key:value
+// key:devName_Addr_channel.tag
+type RealTimeVarTable map[string]MeasureValue
 
-//其他信息归上层服务器管理，例如设备安装位置，厂家、编号等等，与收发无关的信息，该scada的作用就是让采集信息有意义，但是全部意义
+// 解析完没有错误，需要注册全局变量,一个全局名称包括 devName_Addr_channel.tag
 
-// IndexParse Indexarse
-type IndexParse struct {
-	DevCmdID   string  //"Dev.Cmd"
-	Tag        string  `json:"tag,omitempty"`
-	ParType    string  // 参数类型或参数编码
-	StartIndex uint    `json:"start_index,omitempty"`
-	EndIndex   uint    `json:"end_index,omitempty"`
-	Offset     float64 `json:"offset,omitempty"`
-	DataType   uint8   `json:"data_type,omitempty"`
-	PT         uint    `json:"pt,omitempty"`
-	CT         uint    `json:"ct,omitempty"`
-	//Value      float64 `json:"value,omitempty"` // value = (d-offset)*pt/ct
+// Protocol a modbus protocol for some device include modbus commands and suitable data parse rule
+// name and id is necessary for identify, id generate rule M_Ex/Wx/Hx/Ax/Ox_YYYYMMDD_XXX
+// var suppchannel means the protocol support channel type, for std modbus support all channel.
+// Some Device class: EL for ele meter, LW for life water meter, HC for heat/cool meter,
+// AQ for air quality index, VF for pump/fan vfd, VR for VRV unit
+type Protocol struct {
+	Name        string           `json:"name"`                   // 协议名称
+	Alias       string           `json:"company_proseries"`      // 设备厂家_产品系列
+	ID          string           `json:"id"`                     // 协议编码
+	SuppChannel byte             `json:"supp_channel,omitempty"` // 标记支持的通道
+	Cmds        []Command        `json:"cmds"`                   // 命令列表
+	ParseRules  [][]TagParseRule `json:"parse_rules"`            // 解析规则，第一层用于和cmds匹配，一个cmd需要多个tag
 }
 
-type parametertype struct {
-	Name  string
-	parid uint16
-	unit  string
+//其他信息归上层服务器管理，例如设备安装位置，厂家、编号等等，与收发无关的信息，该scada的作用就是让采集信息有意义，但非全部意义
+//暂时不确定 ParseRules 是否合适用json配置，如果过于复杂的话，需要生成json或简化为 []TagParseRule
+
+// TagParseRule tag value calc rule real_v = ((type)measure_value - offset)*pc/ct
+type TagParseRule struct {
+	ID         string  `json:"cmdid_tagid"`      // CMDID_TAGID
+	Tag        string  `json:"tag"`              // 参数名
+	PhyType    string  `json:"phy_type"`         // 参数编码
+	StartIndex uint    `json:"start_index"`      // PDU数据区起始地址
+	EndIndex   uint    `json:"end_index"`        // PDU数据区终止地址
+	Offset     float64 `json:"offset,omitempty"` // 数据修正中心点偏移量，默认为0
+	vType      string  `json:"vtype"`            // 数据类型，用来标记是解析 modbus 大小端，整数类型/浮点数类型/布尔型 &~&
+	PT         uint    `json:"pt,omitempty"`     // PT变比,默认为1
+	CT         uint    `json:"ct,omitempty"`     // CT变比，默认为1
+}
+
+//PhyType data type identical for physical parameter &~&
+type PhyType struct {
+	Name  string `json:"name"`            //物理参数名称
+	Group string `json:"group"`           //单位分组
+	Parid uint16 `json:"id"`              //物理参数id
+	Alias string `json:"alias,omitempty"` //助记符，或英文字母标识，可省略
+	unit  string `json:"unit,omitempty"`  //物理量单位，默认为1
+}
+
+//Command one command is modbus or rs485 protocol command for get a/some value
+type Command struct {
+	Alias     string `json:"name"`          //仅用于助记
+	ID        string `json:"id"`            //用于索引一条命令，在同一个协议内不允许重复
+	Funcode   uint   `json:"funcode"`       //Modbus/PLC 功能码
+	StartAddr uint   `json:"startaddr"`     //Modbus寄存器地址，针对PLCStyle/0xFFFF
+	RegLength uint   `json:"reglength"`     //Modbus寄存器长度
+	Buf       []byte `json:"buf,omitempty"` //Buf 配置情况下，一般为空，仅用于写入情况
 }
 
 // 由于各个字段不同情况范围不一样，那么由业务检查，代码里不做语言要求
-type command struct {
-	Name      string
-	ID        string
-	funcode   uint
-	StartAddr uint //正常情况下uint16足够，但是对于PLC系统，则需要uint才能保证
-	RegLength uint
-	Buf       bytesptr
-}
+
+//根据各个字段索引关系，规定如下
+//1. Parameter 参数由软件自带，给出常用参数向及内容(配置界面1)
+//2. 建立协议,意味着命令与解析规则同时建立并导入（配置界面2）
+//3. 建立信道及设备编号表，导入(建立)
