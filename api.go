@@ -74,6 +74,8 @@ type BQueue struct {
 	Cmds   [][]cmdptr
 }
 
+// 将BQueue 基于新的MD改造为MDN模式，就是需要的工作的
+
 type mdnCycTable struct {
 	mdnHead    MDNode
 	length     int
