@@ -61,10 +61,41 @@ type PLCClient interface {
 
 // configure not conside right
 type comchannel struct {
-	HiQueue   *[]int
-	LoQueue   *[]int
-	configure int
+	highQueue *[]int
+	lowQueue  *[]int
 }
+
+// 设计时需要考虑，在等待串口返回过程中检查队列
+type cmdptr *Command
+
+//BQueue Base Queue
+type BQueue struct {
+	MDList []MDevice
+	Cmds   [][]cmdptr
+}
+
+type mdnCycTable struct {
+	mdnHead    MDNode
+	length     int
+	cmdlength  int
+	currentmdn *MDevice
+	currentcmd *Command
+}
+
+//MDivce 是属于配置系统中的文件，并非系统核心工作文件，需要创新新的核心文件，device.cmd 结构才正常
+
+// MDNode Modbus Device Node
+type MDNode struct {
+	mid    MDevice
+	mdnptr *MDNode
+}
+
+// channel 应该是client的一部分，自动化的那一部分，client.start 就可以运行，client.stop 停止 client.addtohi client.addlowqueue
+// 队列应该是绑定要cmd比较合适，那就必须改造cmd，让其具有设备属性，负责更新值就会产生问题
+// 当基于cmd时，临时队列就不会有设备
+
+//不好……client 检查设备大队列，从大队列中挑选设备用于准备通讯，再检查每大队列中的每个小队列，都必须检查最有队列是否有数据，如果没有，则执行当前队列；
+// 更好的思路是，记录每个设备cmd长度，记录设备，生成虚拟cmd队列，[MD][CMD]*CMD
 
 type channeltype struct {
 	rs485         bool //bit0
@@ -131,7 +162,7 @@ type TagParseRule struct {
 	StartIndex uint    `json:"start_index"`      // PDU数据区起始地址
 	EndIndex   uint    `json:"end_index"`        // PDU数据区终止地址
 	Offset     float64 `json:"offset,omitempty"` // 数据修正中心点偏移量，默认为0
-	vType      string  `json:"vtype"`            // 数据类型，用来标记是解析 modbus 大小端，整数类型/浮点数类型/布尔型 &~&
+	VType      string  `json:"vtype"`            // 数据类型，用来标记是解析 modbus 大小端，整数类型/浮点数类型/布尔型 &~&
 	PT         uint    `json:"pt,omitempty"`     // PT变比,默认为1
 	CT         uint    `json:"ct,omitempty"`     // CT变比，默认为1
 }
@@ -142,7 +173,7 @@ type PhyType struct {
 	Group string `json:"group"`           //单位分组
 	Parid uint16 `json:"id"`              //物理参数id
 	Alias string `json:"alias,omitempty"` //助记符，或英文字母标识，可省略
-	unit  string `json:"unit,omitempty"`  //物理量单位，默认为1
+	Unit  string `json:"unit,omitempty"`  //物理量单位，默认为1
 }
 
 //Command one command is modbus or rs485 protocol command for get a/some value
