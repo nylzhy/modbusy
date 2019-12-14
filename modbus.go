@@ -1,5 +1,7 @@
 package modbusy
 
+import "encoding/binary"
+
 // Modbus APU/PDU max length
 const (
 	MaxADULength       = 256 //MaxADULength ADU 最大长度
@@ -40,6 +42,8 @@ const (
 )
 
 const (
+	//MinReadRegLength 最小线圈或离散寄存器读取量
+	MinReadRegLength = 0x01 //1
 	//MaxReadBitsLength 最大线圈或离散寄存器读取量
 	MaxReadBitsLength = 0x07D0 //2000
 	//MaxWriteBitsLength 最大线圈写入数量
@@ -82,10 +86,53 @@ const (
 	ECGatewayTargetDeviceFailedToRespond = 0x0B // GATEWAY TARGET DEVICE FAILED TO RESPOND 网关目标设备响应失败
 )
 
-// PDU protocol data unit
-type PDU struct {
-	FunctionCode byte
-	Data         []byte
+type protocolDataUnit struct {
+	funCode byte
+	Data    []byte
+}
+
+type respdu []byte
+
+func (r *respdu) check() bool {
+	return true
+}
+
+// protocol data unit
+type resProtocolDataUnit struct {
+	funCode   uint8
+	startAddr uint16
+	regLength uint16
+	Data      []byte
+}
+
+// Request:
+//  Function code         : 1 byte (0x01)
+//  Starting address      : 2 bytes
+//  Quantity of coils     : 2 bytes
+// Response:
+//  Function code         : 1 byte (0x01)
+//  Byte count            : 1 byte
+//  Coil status           : N* bytes (=N or N+1)
+func readCoils(addr, quantity uint16) (respdu, error) {
+	if quantity < MinReadRegLength || quantity > MaxReadBitsLength {
+		return nil, errReadDIORegNum
+	}
+	if addr+quantity-0xFFFF > 1 {
+		return nil, errReadDIORegCap
+	}
+	res := make(respdu, 5)
+	res[0] = FCReadCoils
+	copy(res[1:], genStdByte(addr, quantity))
+
+	// 为了使返回数据可以检查长度内容是否正常，那么必须将在建立一个cmd的PDU特征，以判断长度及内容是否异常
+}
+
+func genStdByte(values ...uint16) []byte {
+	byteSeq := make([]byte, 2*len(values))
+	for i, v := range values {
+		binary.BigEndian.PutUint16(byteSeq[i*2:(i+1)*2], v)
+	}
+	return byteSeq
 }
 
 //RequestPDU Modbus request PDU
@@ -109,6 +156,6 @@ type ExceptionResponsePDU struct {
 // ADU application data unit
 type ADU struct {
 	AddrField []byte
-	PDU
+	protocolDataUnit
 	ErrCheck []byte
 }
