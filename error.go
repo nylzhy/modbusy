@@ -2,6 +2,8 @@ package modbusy
 
 import "fmt"
 
+import "errors"
+
 // Error implements error interface
 type Error struct {
 	//FunctionCode 功能码
@@ -41,3 +43,7 @@ func (e *Error) Error() error {
 	}
 	return fmt.Errorf("'%v' Exception: %s", e.ExceptionCode, name)
 }
+
+var errReadDIORegNum = errors.New("the range of reading DI/DO registers should be in [1,2000]")
+var errReadAIORegNum = errors.New("the range of reading Input/Holding registers should be in [1,255]")
+var errReadDIORegCap = errors.New("the capacity of reading DI/DO registers is over limit")
