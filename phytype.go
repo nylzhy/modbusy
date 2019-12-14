@@ -1,5 +1,14 @@
 package modbusy
 
+//PhyType data type identical for physical parameter &~&
+type PhyType struct {
+	Name  string `json:"name"`            //物理参数名称
+	Group string `json:"group"`           //单位分组
+	Parid uint16 `json:"id"`              //物理参数id
+	Alias string `json:"alias,omitempty"` //助记符，或英文字母标识，可省略
+	Unit  string `json:"unit,omitempty"`  //物理量单位，默认为1
+}
+
 var phytypelist = []PhyType{
 	//能量
 	PhyType{
