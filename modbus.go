@@ -1,6 +1,8 @@
 package modbusy
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 // Modbus APU/PDU max length
 const (
@@ -117,14 +119,89 @@ func readCoils(addr, quantity uint16) (respdu, error) {
 	if quantity < MinReadRegLength || quantity > MaxReadBitsLength {
 		return nil, errReadDIORegNum
 	}
-	if addr+quantity-0xFFFF > 1 {
-		return nil, errReadDIORegCap
+	// fmt.Println(addr + quantity - 0xFFFF)
+	if int(addr)+int(quantity)-0xFFFF > 1 {
+		return nil, errReadRegOverCap
 	}
 	res := make(respdu, 5)
 	res[0] = FCReadCoils
 	copy(res[1:], genStdByte(addr, quantity))
+	return res, nil
+}
 
-	// 为了使返回数据可以检查长度内容是否正常，那么必须将在建立一个cmd的PDU特征，以判断长度及内容是否异常
+// Request:
+//  Function code         : 1 byte (0x02)
+//  Starting address      : 2 bytes
+//  Quantity of inputs    : 2 bytes
+// Response:
+//  Function code         : 1 byte (0x02)
+//  Byte count            : 1 byte
+//  Input status          : N* bytes (=N or N+1)
+func readDiscreteInputs(addr, quantity uint16) (respdu, error) {
+	if quantity < MinReadRegLength || quantity > MaxReadBitsLength {
+		return nil, errReadDIORegNum
+	}
+	if int(addr)+int(quantity)-0xFFFF > 1 {
+		return nil, errReadRegOverCap
+	}
+	res := make(respdu, 5)
+	res[0] = FCReadDiscreteInputs
+	copy(res[1:], genStdByte(addr, quantity))
+	return res, nil
+}
+
+// Request:
+//  Function code         : 1 byte (0x03)
+//  Starting address      : 2 bytes
+//  Quantity of registers : 2 bytes
+// Response:
+//  Function code         : 1 byte (0x03)
+//  Byte count            : 1 byte
+//  Register value        : Nx2 bytes
+func readHoldingReg(addr, quantity uint16) (respdu, error) {
+	if quantity < MinReadRegLength || quantity > MaxReadRegLength {
+		return nil, errReadDIORegNum
+	}
+	if int(addr)+int(quantity)-0xFFFF > 1 {
+		return nil, errReadRegOverCap
+	}
+	res := make(respdu, 5)
+	res[0] = FCReadHoldingReg
+	copy(res[1:], genStdByte(addr, quantity))
+	return res, nil
+}
+
+func readInputReg(addr, quantity uint16) (respdu, error) {
+	if quantity < MinReadRegLength || quantity > MaxReadRegLength {
+		return nil, errReadDIORegNum
+	}
+	if int(addr)+int(quantity)-0xFFFF > 1 {
+		return nil, errReadRegOverCap
+	}
+	res := make(respdu, 5)
+	res[0] = FCReadInputReg
+	copy(res[1:], genStdByte(addr, quantity))
+	return res, nil
+}
+
+func readReg(regType byte, addr, quantity uint16) (respdu, error) {
+	res := make(respdu, 5)
+	switch regType {
+	case FCReadCoils, FCReadDiscreteInputs:
+		if quantity < MinReadRegLength || quantity > MaxReadBitsLength {
+			return nil, errReadDIORegNum
+		}
+	case FCReadHoldingReg, FCReadInputReg:
+		if quantity < MinReadRegLength || quantity > MaxReadRegLength {
+			return nil, errReadDIORegNum
+		}
+	}
+	if int(addr)+int(quantity)-0xFFFF > 1 {
+		return nil, errReadRegOverCap
+	}
+	res[0] = regType
+	copy(res[1:], genStdByte(addr, quantity))
+	return res, nil
 }
 
 func genStdByte(values ...uint16) []byte {

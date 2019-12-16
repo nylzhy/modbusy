@@ -46,4 +46,4 @@ func (e *Error) Error() error {
 
 var errReadDIORegNum = errors.New("the range of reading DI/DO registers should be in [1,2000]")
 var errReadAIORegNum = errors.New("the range of reading Input/Holding registers should be in [1,255]")
-var errReadDIORegCap = errors.New("the capacity of reading DI/DO registers is over limit")
+var errReadRegOverCap = errors.New("the capacity of reading registers is over limit")
