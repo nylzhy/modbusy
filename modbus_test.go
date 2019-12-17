@@ -193,6 +193,16 @@ func Test_readDiscreteInputs(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			//大小端测试
+			name: "testReadDI_SH",
+			args: args{
+				addr:     1,
+				quantity: 300,
+			},
+			want:    respdu{02, 00, 01, 01, 0x2C},
+			wantErr: false,
+		},
+		{
 			name: "testReadDI_2",
 			args: args{
 				addr:     0,

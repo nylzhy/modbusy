@@ -207,6 +207,7 @@ func readReg(regType byte, addr, quantity uint16) (respdu, error) {
 func genStdByte(values ...uint16) []byte {
 	byteSeq := make([]byte, 2*len(values))
 	for i, v := range values {
+		//大端编码
 		binary.BigEndian.PutUint16(byteSeq[i*2:(i+1)*2], v)
 	}
 	return byteSeq
