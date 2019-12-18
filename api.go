@@ -10,7 +10,7 @@ type RawClient interface {
 	// 线圈				写单个线圈				0x05		0x0000-0xFFFF		1							0xFF00/0x0000
 	// 保持寄存器		写单个保持寄存器		0x06		0x0000-0xFFFF 		1							2bytes
 	// 线圈				写多个线圈				0x0F 		0x0000-0XFFFF		1-2000(0x001~0x7D0)     	Bit
-	// 保持寄存器		写多个保持寄存器	 	0X10		0x0000-0xFFFF		1-120(0x01-0x78)			2bytes
+	// 保持寄存器		写多个保持寄存器	 	0X10		0x0000-0xFFFF		1-123(0x01-0x78)			2bytes
 
 	//Read Coils/DiscreteInputs/InputRegisters/HoldingRegisters
 	Read(slaveIDAddr uint8, funCode uint8, regAddr, length uint) (result []byte, err error)
