@@ -47,3 +47,7 @@ func (e *Error) Error() error {
 var errReadDIORegNum = errors.New("the range of reading DI/DO registers should be in [1,2000]")
 var errReadAIORegNum = errors.New("the range of reading Input/Holding registers should be in [1,255]")
 var errReadRegOverCap = errors.New("the capacity of reading registers is over limit")
+var errWriteCoilsOverLimit = errors.New("the write coils quantity should be in [1,1968]")
+var errValueLengthMatch = errors.New("the value length given is matched to needed")
+var errWriteHoldRegOverLimit = errors.New("the write coils quantity should be in [1,123]")
+var errValueOverLimie = errors.New("the value given is over limit, a valid value is [0,65535] or [-32768,32767]")
