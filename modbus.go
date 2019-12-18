@@ -204,6 +204,98 @@ func readReg(regType byte, addr, quantity uint16) (respdu, error) {
 	return res, nil
 }
 
+func writeOneCoil(addr uint16, coilv bool) (respdu, error) {
+	var coilSet uint16
+	if coilv {
+		coilSet = 0xFF00
+	}
+	res := make(respdu, 5)
+	res[0] = FCWriteSingleCoil
+	copy(res[1:], genStdByte(addr, coilSet))
+	return res, nil
+}
+
+func writeMulCoils(addr, quantity uint16, coilsV []bool) (respdu, error) {
+	if quantity < 1 || quantity > MaxWriteBitsLength {
+		return nil, errWriteCoilsOverLimit
+	}
+	if int(quantity) > len(coilsV) {
+		return nil, errValueLengthMatch
+	}
+	// var datalen uint16
+	// if quantity%16 == 0 {
+	// 	datalen = quantity / 8
+	// } else {
+	// 	datalen = quantity/16 + 1
+	// }
+	data := bool2byte(coilsV[:quantity])
+
+	res := make(respdu, 1+2+2+1+len(data))
+	res[0] = FCWriteMultipleCoils
+	copy(res[1:5], genStdByte(addr, quantity))
+	// data := bool2byte(coilsV)
+	res[5] = byte(len(data))
+	copy(res[6:], data)
+	return res, nil
+}
+
+// type word struct {
+// 	Hi     byte
+// 	Lo     byte
+// 	endian binary.ByteOrder
+// }
+
+// func (w word) bytes() []byte {
+// 	if w.endian == binary.BigEndian {
+// 		return []byte{w.Hi, w.Lo}
+// 	}
+// 	return []byte{w.Lo, w.Hi}
+// }
+
+// func (w word) set(v int) error {
+// 	if v < -32768 || v > 65535 {
+// 		return errValueOverLimie
+// 	}
+// 	temp := make([]byte, 2)
+// 	if v < 0 {
+// 		w.endian.PutUint16(temp, uint16(int16(v)))
+// 	}
+// 	w.endian.PutUint16(temp, uint16(v))
+// 	w.Hi = temp[1]
+// 	w.Lo = temp[0]
+// 	return nil
+// }
+
+// func (w word) get() int {
+// 	temp := []byte{w.Lo, w.Hi}
+// 	return int(w.endian.Uint16(temp))
+// }
+
+// 此处 uint16/int16 可能不合适, 需要一个与类型无关的量作为底层数据存放，上端放入合适的值就可, 但是返回数据的时候，还需考虑客户端如何解析，如果必须这样，放弃解析考虑，
+// 客户端由客户端解析，服务器端由服务器端解析，两者分离，只传递中性数据更合适，这样服务器端不需要检查编码方式，解析方式，这应该是更好的解决方案
+func writeOneHold(addr uint16, holdv uint16) (respdu, error) {
+	res := make(respdu, 5)
+	res[0] = FCWriteSingleReg
+	copy(res[1:5], genStdByte(addr, holdv))
+	// copy(res[3:5], holdv)
+	return res, nil
+}
+
+func writeMulHold(addr, quantity uint16, holdvs []uint16) (respdu, error) {
+	if quantity < 1 || quantity > MaxWriteRegLength {
+		return nil, errWriteHoldRegOverLimit
+	}
+	if int(quantity) > len(holdvs) {
+		return nil, errValueLengthMatch
+	}
+	res := make([]byte, 1+2+2+1+quantity*2)
+	res[0] = FCWriteMultipleReg
+	copy(res[1:5], genStdByte(addr, quantity))
+	res[5] = byte(2 * quantity)
+	copy(res[6:], genStdByte(holdvs[0:quantity]...))
+	return res, nil
+}
+
 func genStdByte(values ...uint16) []byte {
 	byteSeq := make([]byte, 2*len(values))
 	for i, v := range values {
@@ -211,6 +303,30 @@ func genStdByte(values ...uint16) []byte {
 		binary.BigEndian.PutUint16(byteSeq[i*2:(i+1)*2], v)
 	}
 	return byteSeq
+}
+
+func bool2byte(values []bool) []byte {
+	if len(values) == 0 {
+		return []byte{0}
+	}
+	var length int
+	if len(values)%8 == 0 {
+		length = len(values) / 8
+	} else {
+		length = len(values)/8 + 1
+	}
+
+	res := make([]byte, length)
+	for i := 0; i < len(values); i++ {
+		index := i % 8
+		loc := i / 8
+		// fmt.Printf("i:%d\tloc:%d\tindex:%d\tvalue:%v", i, loc, index, values[i])
+		if values[i] {
+			res[loc] += (1 << index)
+			// fmt.Printf("res[loc]:%d\trealvalue:%d\n", res[loc], 1<<index)
+		}
+	}
+	return res
 }
 
 //RequestPDU Modbus request PDU
